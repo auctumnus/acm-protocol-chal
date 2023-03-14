@@ -203,6 +203,7 @@ async fn handle_connection(
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
+    pretty_env_logger::init();
     let args = Args::parse();
 
     let flag = args
