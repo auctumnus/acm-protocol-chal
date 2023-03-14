@@ -1,3 +1,4 @@
+use log::info;
 use rand::seq::SliceRandom;
 use std::{
     ffi::OsString,
@@ -112,6 +113,8 @@ async fn write_message(socket: &TcpStream, buf: &[u8]) -> Result<(), io::Error> 
     }
 }
 
+/// Returns true if the user has taken too long to complete the challenge since
+/// the given start time.
 fn took_too_long(start_time: SystemTime) -> bool {
     start_time
         .elapsed()
@@ -120,9 +123,8 @@ fn took_too_long(start_time: SystemTime) -> bool {
         > 5
 }
 
+/// Returns the correct response given a word.
 fn correct_response(word: &str) -> &str {
-    // why god do i have to do .as_bytes()
-    // why is &&&str not just &str
     let index = WORDS
         .iter()
         .enumerate()
@@ -138,7 +140,7 @@ async fn handle_connection(
     socket: &TcpStream,
     addr: &SocketAddr,
 ) -> Result<(), io::Error> {
-    println!("received connection: {addr}");
+    info!("received connection: {addr}");
 
     let mut rng = rand::thread_rng();
     let start_time = SystemTime::now();
@@ -173,7 +175,7 @@ async fn handle_connection(
         let end = (i + 1) * 8;
         let keywords = &keywords[start..end];
         let words = keywords.join(" ");
-        let words = [words, String::from("\n")].concat(); // add newline
+        let words = [words.as_str(), "\n"].concat(); // add newline
 
         write_message(socket, words.as_bytes()).await?;
         read_message(socket, &mut buf).await?;
@@ -186,7 +188,6 @@ async fn handle_connection(
 
         for (ours, theirs) in correct_responses.zip(response_words) {
             if ours != theirs {
-                println!("expected {ours}, got {theirs}");
                 write_message(socket, b"you said the wrong word!\n").await?;
                 return Ok(());
             }
@@ -221,17 +222,17 @@ async fn main() -> Result<(), ()> {
             Ok((socket, addr)) => {
                 handle_connection(&flag, &socket, &addr)
                     .await
-                    .unwrap_or_else(|e| eprintln!("handling connection failed: {e}"));
-                println!("shutting down connection");
+                    .unwrap_or_else(|e| info!("handling connection failed: {e}"));
+                info!("shutting down connection");
                 let shutdown_status = socket
                     .into_std()
                     .map(|s| s.shutdown(std::net::Shutdown::Both));
                 match shutdown_status {
-                    Ok(_) => println!("successfully shut down connection"),
-                    Err(e) => eprintln!("failed to shut down connection: {e}"),
+                    Ok(_) => info!("successfully shut down connection"),
+                    Err(e) => info!("failed to shut down connection: {e}"),
                 };
             }
-            Err(e) => eprintln!("{e}"),
+            Err(e) => info!("{e}"),
         }
     }
 }
