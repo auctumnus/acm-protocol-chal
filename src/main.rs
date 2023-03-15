@@ -211,7 +211,7 @@ async fn main() -> Result<(), ()> {
         .or(std::env::var_os("FLAG"))
         .expect("couldn't get flag (either provide it in `--flag`, or a `FLAG` env var");
 
-    let address = SocketAddr::from(([127, 0, 0, 1], args.port));
+    let address = SocketAddr::from(([0, 0, 0, 0], args.port));
     let listener = TcpListener::bind(address)
         .await
         .unwrap_or_else(|_| panic!("could not bind to {address}, dying"));
